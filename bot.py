@@ -1,22 +1,59 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
 import telebot
+import configparser
+import os
 import transmissionrpc
 import sys
 import logging as log
 import signal
 import time
-from config import transmission_host, transmission_port, transmission_user, transmission_password, token, download_dir
 
-bot = telebot.TeleBot(token, threaded=False)
+
+class Config():
+    config = configparser.ConfigParser()
+    config_file_path = None
+
+    def __init__(self):
+        self.config_file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'config')
+        self.load_config()
+
+    def load_config(self):
+        '''Load configuration parameters'''
+        if os.path.exists(self.config_file_path):
+            self.config.read(self.config_file_path)
+        else:
+            self.set_default_config()
+
+    def set_default_config(self):
+        '''Set default configuration'''
+        self.config['telegram'] = {}
+        self.config['telegram']['token'] = 'TELEGRAM_BOT_TOKEN'
+        self.config['transmission'] = {}
+        self.config['transmission']['transmission_host'] = 'localhost'
+        self.config['transmission']['transmission_port'] = '9091'
+        self.config['transmission']['transmission_user'] = 'admin'
+        self.config['transmission']['transmission_password'] = ''
+        self.config['transmission']['transmission_download_dir'] = ''
+
+        with open(self.config_file_path, 'w') as config_file:
+            self.config.write(config_file)
+
+    def get(self):
+        '''Obtain configuration'''
+        return self.config
 
 
 class Transmission:
-    def __init__(self, transmission_host, transmission_port, transmission_user, transmission_password, download_dir):
+    def __init__(self, config):
+        self.config = config
         try:
             self.tc = transmissionrpc.Client(
-                address=transmission_host, port=transmission_port, user=transmission_user,
-                password=transmission_password, download_dir=download_dir
+                address=config['transmission']['transmission_host'],
+                port=config['transmission']['transmission_port'],
+                user=config['transmission']['transmission_user'],
+                password=config.get['transmission']['transmission_password'],
+                download_dir=config.get['transmission']['transmission_download_dir']
             )
         except transmissionrpc.error.TransmissionError:
             print("ERROR: Failed to connect to Transmission. Check rpc configuration.")
@@ -28,6 +65,9 @@ class Transmission:
     def get_torrents(self):
         return self.tc.get_torrents()
 
+
+config = Config().get()
+bot = telebot.TeleBot(config['telegram']['token'], threaded=False)
 
 @bot.message_handler(commands=['start', 'help'])
 def greet_new_user(message):
@@ -53,7 +93,7 @@ def greet_new_user(message):
 @bot.message_handler(commands=['add'])
 def add_new_torrent(message):
     torrent_link = message.text.replace('/add ', '', 1)
-    transmission = Transmission()
+    transmission = Transmission(config)
     add_result = transmission.add_new_torrent(torrent_link)
     bot.send_message(
         message.chat.id, "Torrent was successfully added:\n{0}".format(add_result)
@@ -62,7 +102,7 @@ def add_new_torrent(message):
 
 @bot.message_handler(commands=['list'])
 def list_all_torrents(message):
-    transmission = Transmission()
+    transmission = Transmission(config)
     torrents = transmission.get_torrents()
     bot.send_message(
         message.chat.id, "{0}".format(torrents)
