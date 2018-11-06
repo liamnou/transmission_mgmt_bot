@@ -52,18 +52,17 @@ class Transmission:
                 address=config['transmission']['transmission_host'],
                 port=config['transmission']['transmission_port'],
                 user=config['transmission']['transmission_user'],
-                password=config.get['transmission']['transmission_password'],
-                download_dir=config.get['transmission']['transmission_download_dir']
+                password=config['transmission']['transmission_password']
             )
         except transmissionrpc.error.TransmissionError:
             print("ERROR: Failed to connect to Transmission. Check rpc configuration.")
             sys.exit()
 
-    def add_new_torrent(self, torrent_link):
-        return self.tc.add_torrent(torrent_link)
+    def add_torrent(self, torrent_link):
+        return self.tc.add_torrent(torrent_link, download_dir=config.get['transmission']['transmission_download_dir'])
 
     def get_torrents(self):
-        return self.tc.get_torrents()
+        torrents = self.tc.get_torrents()
 
 
 config = Config().get()
@@ -104,6 +103,7 @@ def add_new_torrent(message):
 def list_all_torrents(message):
     transmission = Transmission(config)
     torrents = transmission.get_torrents()
+    print(torrents)
     bot.send_message(
         message.chat.id, "{0}".format(torrents)
     )
