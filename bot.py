@@ -62,7 +62,23 @@ class Transmission:
         return self.tc.add_torrent(torrent_link, download_dir=config.get['transmission']['transmission_download_dir'])
 
     def get_torrents(self):
-        torrents = self.tc.get_torrents()
+        torrents = [[t.id, t.name, t.status, round(t.progress, 2)] for t in self.tc.get_torrents()]
+        return torrents
+
+    def get_files(self, torrent_ids):
+        files_list = []
+        files_dict = self.tc.get_files(torrent_ids)
+        for torrent_id, files in files_dict.items():
+            for file_id, props in files.items():
+                files_list.append('[{0}] {1} {2} MB'.format(file_id, props['name'], round(int(props['size']) / 1048576)))
+        return files_list
+
+    def get_torrents_with_files(self):
+        torrents = self.get_torrents()
+        torrents_dict = {}
+        for torrent in torrents:
+            torrents_dict[' '.join(str(e) for e in torrent)] = self.get_files(torrent[0])
+        return torrents_dict
 
 
 config = Config().get()
@@ -73,6 +89,7 @@ def greet_new_user(message):
     welcome_msg = "\nWelcome to Transmission management bot!\nCommands available:\n" \
                   "/add - Add torrent to transfers list by URL or magnet link.\n" \
                   "/list - Print information for current torrents with provided ids\n" \
+                  "/list+files - Print information for current torrents with files listing\n" \
                   "/delete - Delete torrent from transfers list by ID\n" \
                   "/stop - Stop torrent by ID\n" \
                   "/start - Start torrent by ID\n" \
@@ -102,10 +119,26 @@ def add_new_torrent(message):
 @bot.message_handler(commands=['list'])
 def list_all_torrents(message):
     transmission = Transmission(config)
+    full_message_text = "Active torrents:\n"
     torrents = transmission.get_torrents()
-    print(torrents)
+    for torrent in torrents:
+        full_message_text += '#{0}\n'.format(' '.join(str(e) for e in torrent))
     bot.send_message(
-        message.chat.id, "{0}".format(torrents)
+        message.chat.id, "{0}".format(full_message_text)
+    )
+
+
+@bot.message_handler(commands=['list_w_files'])
+def list_all_torrents_with_files(message):
+    transmission = Transmission(config)
+    full_message_text = "Active torrents:\n"
+    torrents = transmission.get_torrents_with_files()
+    for torrent_info, files_info in torrents.items():
+        full_message_text += '#{0}\n'.format(torrent_info)
+        for file_info in files_info:
+            full_message_text += '|__ {0}\n'.format(file_info)
+    bot.send_message(
+        message.chat.id, "{0}".format(full_message_text)
     )
 
 
