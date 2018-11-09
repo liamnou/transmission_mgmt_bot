@@ -58,9 +58,6 @@ class Transmission:
             print("ERROR: Failed to connect to Transmission. Check rpc configuration.")
             sys.exit()
 
-    def add_torrent(self, torrent_link):
-        return self.tc.add_torrent(torrent_link, download_dir=config.get['transmission']['transmission_download_dir'])
-
     def get_torrents(self):
         torrents = [[t.id, t.name, t.status, round(t.progress, 2)] for t in self.tc.get_torrents()]
         return torrents
@@ -80,9 +77,17 @@ class Transmission:
             torrents_dict[' '.join(str(e) for e in torrent)] = self.get_files(torrent[0])
         return torrents_dict
 
+    def add_torrent(self, torrent_link):
+        return self.tc.add_torrent(torrent_link, download_dir=config.get['transmission']['transmission_download_dir'])
+
+    def delete_torrents(self, torrent_ids):
+        self.tc.remove_torrent(torrent_ids)
+        return 0
+
 
 config = Config().get()
 bot = telebot.TeleBot(config['telegram']['token'], threaded=False)
+
 
 @bot.message_handler(commands=['start', 'help'])
 def greet_new_user(message):
@@ -105,17 +110,6 @@ def greet_new_user(message):
         bot.send_message(message.chat.id, "Hello, " + message.chat.title + welcome_msg)
 
 
-
-@bot.message_handler(commands=['add'])
-def add_new_torrent(message):
-    torrent_link = message.text.replace('/add ', '', 1)
-    transmission = Transmission(config)
-    add_result = transmission.add_new_torrent(torrent_link)
-    bot.send_message(
-        message.chat.id, "Torrent was successfully added:\n{0}".format(add_result)
-    )
-
-
 @bot.message_handler(commands=['list'])
 def list_all_torrents(message):
     transmission = Transmission(config)
@@ -136,9 +130,29 @@ def list_all_torrents_with_files(message):
     for torrent_info, files_info in torrents.items():
         full_message_text += '#{0}\n'.format(torrent_info)
         for file_info in files_info:
-            full_message_text += '|__ {0}\n'.format(file_info)
+            full_message_text += '{0}\n'.format(file_info)
     bot.send_message(
         message.chat.id, "{0}".format(full_message_text)
+    )
+
+
+@bot.message_handler(commands=['add'])
+def add_new_torrent(message):
+    torrent_link = message.text.replace('/add ', '', 1)
+    transmission = Transmission(config)
+    add_result = transmission.add_new_torrent(torrent_link)
+    bot.send_message(
+        message.chat.id, "Torrent was successfully added:\n{0}".format(add_result)
+    )
+
+
+@bot.message_handler(commands=['delete'])
+def delete_torrents(message):
+    torrent_ids = message.text.replace('/delete ', '', 1).split()
+    transmission = Transmission(config)
+    transmission.delete_torrents(torrent_ids)
+    bot.send_message(
+        message.chat.id, "Torrents with IDs {0} were deleted.\n".format(' '.join(str(e) for e in torrent_ids))
     )
 
 
