@@ -78,7 +78,11 @@ class Transmission:
         return torrents_dict
 
     def add_torrent(self, torrent_link):
-        return self.tc.add_torrent(torrent_link, download_dir=config.get['transmission']['transmission_download_dir'])
+        return self.tc.add_torrent(torrent_link, download_dir=config['transmission']['transmission_download_dir'])
+
+    def start_torrents(self, torrent_ids):
+        self.tc.start_torrent(torrent_ids)
+        return 0
 
     def delete_torrents(self, torrent_ids):
         self.tc.remove_torrent(torrent_ids)
@@ -95,9 +99,9 @@ def greet_new_user(message):
                   "/add - Add torrent to transfers list by URL or magnet link.\n" \
                   "/list - Print information for current torrents with provided ids\n" \
                   "/list+files - Print information for current torrents with files listing\n" \
-                  "/delete - Delete torrent from transfers list by ID\n" \
-                  "/stop - Stop torrent by ID\n" \
-                  "/start - Start torrent by ID\n" \
+                  "/delete - Delete torrent from transfers list by IDs\n" \
+                  "/stop - Stop torrent by IDs\n" \
+                  "/go - Start torrent by IDs\n" \
                   "/help - Print help message"
     if message.chat.first_name is not None:
         if message.chat.last_name is not None:
@@ -140,9 +144,19 @@ def list_all_torrents_with_files(message):
 def add_new_torrent(message):
     torrent_link = message.text.replace('/add ', '', 1)
     transmission = Transmission(config)
-    add_result = transmission.add_new_torrent(torrent_link)
+    add_result = transmission.add_torrent(torrent_link)
     bot.send_message(
         message.chat.id, "Torrent was successfully added:\n{0}".format(add_result)
+    )
+
+
+@bot.message_handler(commands=['go'])
+def add_new_torrent(message):
+    torrent_ids = message.text.replace('/go ', '', 1).split()
+    transmission = Transmission(config)
+    transmission.start_torrents(torrent_ids)
+    bot.send_message(
+        message.chat.id, "Torrents with IDs {0} were started.\n".format(' '.join(str(e) for e in torrent_ids))
     )
 
 
