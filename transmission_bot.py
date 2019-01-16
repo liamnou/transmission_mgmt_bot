@@ -78,7 +78,8 @@ class Transmission:
         return torrents_dict
 
     def add_torrent(self, torrent_link):
-        return self.tc.add_torrent(torrent_link, download_dir=config['transmission']['transmission_download_dir'])
+        add_result = self.tc.add_torrent(torrent_link, download_dir=config['transmission']['transmission_download_dir'])
+        return add_result.id
 
     def start_torrents(self, torrent_ids):
         self.tc.start_torrent(torrent_ids)
@@ -152,7 +153,7 @@ def add_new_torrent(message):
     transmission = Transmission(config)
     add_result = transmission.add_torrent(torrent_link)
     bot.send_message(
-        message.chat.id, "Torrent was successfully added:\n{0}".format(add_result)
+        message.chat.id, "Torrent was successfully added with ID #{0}".format(add_result)
     )
 
 
