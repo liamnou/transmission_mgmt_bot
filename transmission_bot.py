@@ -117,10 +117,13 @@ def greet_new_user(message):
 @bot.message_handler(commands=['list'])
 def list_all_torrents(message):
     transmission = Transmission(config)
-    full_message_text = "Active torrents:\n"
     torrents = transmission.get_torrents()
-    for torrent in torrents:
-        full_message_text += '#{0}\n'.format(' '.join(str(e) for e in torrent))
+    if torrents:
+        full_message_text = "Active torrents:\n"
+        for torrent in torrents:
+            full_message_text += '#{0}\n'.format(' '.join(str(e) for e in torrent))
+    else:
+        full_message_text = 'There are no active torrents'
     bot.send_message(
         message.chat.id, "{0}".format(full_message_text)
     )
@@ -129,12 +132,15 @@ def list_all_torrents(message):
 @bot.message_handler(commands=['list_w_files'])
 def list_all_torrents_with_files(message):
     transmission = Transmission(config)
-    full_message_text = "Active torrents:\n"
     torrents = transmission.get_torrents_with_files()
-    for torrent_info, files_info in torrents.items():
-        full_message_text += '#{0}\n'.format(torrent_info)
-        for file_info in files_info:
-            full_message_text += '{0}\n'.format(file_info)
+    if torrents:
+        full_message_text = "Active torrents:\n"
+        for torrent_info, files_info in torrents.items():
+            full_message_text += '#{0}\n'.format(torrent_info)
+            for file_info in files_info:
+                full_message_text += '{0}\n'.format(file_info)
+    else:
+        full_message_text = 'There are no active torrents'
     bot.send_message(
         message.chat.id, "{0}".format(full_message_text)
     )
