@@ -12,19 +12,22 @@ apt-get update
 apt-get install docker-ce
 
 # Prepare config
-echo -n "Enter telegram API token and press [ENTER]: "
-read token
-echo -n "Enter transmission URL and press [ENTER]: "
-read transmission_host
-echo -n "Enter transmission port and press [ENTER]: "
-read transmission_port
-echo -n "Enter username to access ${transmission_host} and press [ENTER]: "
-read transmission_user
-echo -n "Enter password for ${transmission_user} and press [ENTER]: "
-read transmission_password
-echo -n "Enter transmission download dir and press [ENTER]: "
-read transmission_download_dir
-cat > ./app/config << EOL
+echo -n "Generate config.py? [y/n]: "
+read generate_config
+if [[ ${generate_config,,} == "y" || ${generate_config,,} == "yes" ]]; then
+   echo -n "Enter telegram API token and press [ENTER]: "
+   read token
+   echo -n "Enter transmission URL and press [ENTER]: "
+   read transmission_host
+   echo -n "Enter transmission port and press [ENTER]: "
+   read transmission_port
+   echo -n "Enter username to access ${transmission_host} and press [ENTER]: "
+   read transmission_user
+   echo -n "Enter password for ${transmission_user} and press [ENTER]: "
+   read transmission_password
+   echo -n "Enter transmission download dir and press [ENTER]: "
+   read transmission_download_dir
+   cat > ./app/config << EOL
 [telegram]
 token = ${token}
 
@@ -35,6 +38,7 @@ transmission_user = ${transmission_user}
 transmission_password = ${transmission_password}
 transmission_download_dir = ${transmission_download_dir}
 EOL
+fi
 
 # Build image
 docker build -t transmission_mgmt_bot_image .
