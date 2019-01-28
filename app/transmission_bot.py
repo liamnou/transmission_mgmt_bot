@@ -94,7 +94,17 @@ config = Config().get()
 bot = telebot.TeleBot(config['telegram']['token'], threaded=False)
 
 
+def log_and_send_message_decorator(fn):
+    def wrapper(message):
+        log.info("[FROM {}] [{}]".format(message.chat.id, message.text))
+        reply = fn(message)
+        log.info("[TO {}] [{}]".format(message.chat.id, reply))
+        bot.send_message(message.chat.id, reply)
+    return wrapper
+
+
 @bot.message_handler(commands=['start', 'help'])
+@log_and_send_message_decorator
 def greet_new_user(message):
     welcome_msg = "\nWelcome to Transmission management bot!\nCommands available:\n" \
                   "/add - Add torrent to transfers list by URL or magnet link.\n" \
@@ -106,75 +116,69 @@ def greet_new_user(message):
                   "/help - Print help message"
     if message.chat.first_name is not None:
         if message.chat.last_name is not None:
-            bot.send_message(
-                message.chat.id, "Hello, " + message.chat.first_name + " " + message.chat.last_name + welcome_msg
-            )
+            reply = "Hello, {} {} {}".format(message.chat.first_name, message.chat.last_name, welcome_msg)
         else:
-            bot.send_message(message.chat.id, "Hello, " + message.chat.first_name + welcome_msg)
+            reply = "Hello, {} {}".format(message.chat.first_name, welcome_msg)
     else:
-        bot.send_message(message.chat.id, "Hello, " + message.chat.title + welcome_msg)
+        reply = "Hello, {} {}".format(message.chat.title, welcome_msg)
+    return reply
 
 
 @bot.message_handler(commands=['list'])
+@log_and_send_message_decorator
 def list_all_torrents(message):
     transmission = Transmission(config)
     torrents = transmission.get_torrents()
     if torrents:
-        full_message_text = "Active torrents:\n"
+        reply = "Active torrents:\n"
         for torrent in torrents:
-            full_message_text += '#{0}\n'.format(' '.join(str(e) for e in torrent))
+            reply += "#{0}\n".format(' '.join(str(e) for e in torrent))
     else:
-        full_message_text = 'There are no active torrents'
-    bot.send_message(
-        message.chat.id, "{0}".format(full_message_text)
-    )
+        reply = "There are no active torrents"
+    return reply
 
 
 @bot.message_handler(commands=['list_w_files'])
+@log_and_send_message_decorator
 def list_all_torrents_with_files(message):
     transmission = Transmission(config)
     torrents = transmission.get_torrents_with_files()
     if torrents:
-        full_message_text = "Active torrents:\n"
+        reply = "Active torrents:\n"
         for torrent_info, files_info in torrents.items():
-            full_message_text += '#{0}\n'.format(torrent_info)
+            reply += "#{0}\n".format(torrent_info)
             for file_info in files_info:
-                full_message_text += '{0}\n'.format(file_info)
+                reply += "{0}\n".format(file_info)
     else:
-        full_message_text = 'There are no active torrents'
-    bot.send_message(
-        message.chat.id, "{0}".format(full_message_text)
-    )
+        reply = "There are no active torrents"
+    return reply
 
 
 @bot.message_handler(commands=['add'])
+@log_and_send_message_decorator
 def add_new_torrent(message):
     torrent_link = message.text.replace('/add ', '', 1)
     transmission = Transmission(config)
     add_result = transmission.add_torrent(torrent_link)
-    bot.send_message(
-        message.chat.id, "Torrent was successfully added with ID #{0}".format(add_result)
-    )
+    return "Torrent was successfully added with ID #{0}".format(add_result)
 
 
 @bot.message_handler(commands=['go'])
+@log_and_send_message_decorator
 def add_new_torrent(message):
     torrent_ids = message.text.replace('/go ', '', 1).split()
     transmission = Transmission(config)
     transmission.start_torrents(torrent_ids)
-    bot.send_message(
-        message.chat.id, "Torrents with IDs {0} were started.\n".format(' '.join(str(e) for e in torrent_ids))
-    )
+    return "Torrents with IDs {0} were started.\n".format(' '.join(str(e) for e in torrent_ids))
 
 
 @bot.message_handler(commands=['delete'])
+@log_and_send_message_decorator
 def delete_torrents(message):
     torrent_ids = message.text.replace('/delete ', '', 1).split()
     transmission = Transmission(config)
     transmission.delete_torrents(torrent_ids)
-    bot.send_message(
-        message.chat.id, "Torrents with IDs {0} were deleted.\n".format(' '.join(str(e) for e in torrent_ids))
-    )
+    return "Torrents with IDs {0} were deleted.\n".format(' '.join(str(e) for e in torrent_ids))
 
 
 def signal_handler(signal_number, frame):
