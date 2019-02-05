@@ -44,4 +44,4 @@ fi
 docker build -t transmission_mgmt_bot_image .
 
 # Run container from image
-docker run -d --name=transmission_mgmt_bot -v ~/transmission_mgmt_bot_app:/mnt transmission_mgmt_bot_image
+docker run -d --name=transmission_mgmt_bot -v transmission_mgmt_bot_app:/app transmission_mgmt_bot_image
