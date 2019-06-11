@@ -192,17 +192,9 @@ def main():
     log.basicConfig(level=log.INFO,
                     format='%(asctime)s %(levelname)s %(message)s')
     log.info('Bot was started.')
-
     signal.signal(signal.SIGINT, signal_handler)
-
-    while True:
-        try:
-            log.info('Starting bot polling...')
-            bot.polling()
-        except Exception as err:
-            log.error("Bot polling error: {0}".format(err.args))
-            bot.stop_polling()
-            time.sleep(30)
+    log.info('Starting bot polling...')
+    bot.polling()
 
 
 if __name__ == '__main__':
