@@ -1,13 +1,16 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
+import time
 import telebot
 import configparser
 import os
 import transmissionrpc
-import sys
 import logging as log
 import signal
-import time
+import sys
+import bencodepy
+import hashlib
+import base64
 
 
 class Config():
@@ -91,6 +94,7 @@ class Transmission:
 
 
 config = Config().get()
+transmission = Transmission(config)
 bot = telebot.TeleBot(config['telegram']['token'], threaded=False)
 
 
@@ -127,7 +131,6 @@ def greet_new_user(message):
 @bot.message_handler(commands=['list'])
 @log_and_send_message_decorator
 def list_all_torrents(message):
-    transmission = Transmission(config)
     torrents = transmission.get_torrents()
     if torrents:
         reply = "Active torrents:\n"
@@ -141,7 +144,6 @@ def list_all_torrents(message):
 @bot.message_handler(commands=['list_w_files'])
 @log_and_send_message_decorator
 def list_all_torrents_with_files(message):
-    transmission = Transmission(config)
     torrents = transmission.get_torrents_with_files()
     if torrents:
         reply = "Active torrents:\n"
@@ -158,16 +160,33 @@ def list_all_torrents_with_files(message):
 @log_and_send_message_decorator
 def add_new_torrent(message):
     torrent_link = message.text.replace('/add ', '', 1)
-    transmission = Transmission(config)
+
     add_result = transmission.add_torrent(torrent_link)
     return "Torrent was successfully added with ID #{0}".format(add_result)
+
+
+@bot.message_handler(content_types=['document'])
+@log_and_send_message_decorator
+def add_new_torrent_by_file(message):
+    file_info = bot.get_file(message.document.file_id)
+    downloaded_file = bot.download_file(file_info.file_path)
+    torrent_file_name = "{}.torrent".format(time.strftime("%d%m%Y%H%M%S"))
+    with open(torrent_file_name, 'wb') as new_file:
+        new_file.write(downloaded_file)
+        metadata = bencodepy.decode_from_file(torrent_file_name)
+        subj = metadata[b'info']
+        hashcontents = bencodepy.encode(subj)
+        digest = hashlib.sha1(hashcontents).digest()
+        b32hash = base64.b32encode(digest).decode()
+        add_result = transmission.add_torrent('magnet:?xt=urn:btih:' + b32hash)
+        os.remove(torrent_file_name)
+        return "Torrent was successfully added with ID #{0}".format(add_result)
 
 
 @bot.message_handler(commands=['go'])
 @log_and_send_message_decorator
 def add_new_torrent(message):
     torrent_ids = message.text.replace('/go ', '', 1).split()
-    transmission = Transmission(config)
     transmission.start_torrents(torrent_ids)
     return "Torrents with IDs {0} were started.\n".format(' '.join(str(e) for e in torrent_ids))
 
@@ -176,7 +195,6 @@ def add_new_torrent(message):
 @log_and_send_message_decorator
 def delete_torrents(message):
     torrent_ids = message.text.replace('/delete ', '', 1).split()
-    transmission = Transmission(config)
     transmission.delete_torrents(torrent_ids)
     return "Torrents with IDs {0} were deleted.\n".format(' '.join(str(e) for e in torrent_ids))
 
