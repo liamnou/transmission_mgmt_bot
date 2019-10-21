@@ -160,9 +160,12 @@ def list_all_torrents_with_files(message):
 @log_and_send_message_decorator
 def add_new_torrent(message):
     torrent_link = message.text.replace('/add ', '', 1)
-
-    add_result = transmission.add_torrent(torrent_link)
-    return "Torrent was successfully added with ID #{0}".format(add_result)
+    if 'magnet:?' in torrent_link:
+        add_result = transmission.add_torrent(torrent_link)
+        reply = "Torrent was successfully added with ID #{0}".format(add_result)
+    else:
+        reply = "Please check your magnet link and try again"
+    return reply
 
 
 @bot.message_handler(content_types=['document'])
